@@ -1,19 +1,34 @@
-//
-// Copyright 2012 Ettus Research LLC
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
+/* packet-vrt.c
+ * Routines for VRT (VITA 49) packet disassembly
+ * Copyright 2013, Alexander Chemeris
+ *
+ * $Id: packet-vrt.c 47974 2013-03-21 13:24:24Z eapache $
+ *
+ * Wireshark - Network traffic analyzer
+ * By Gerald Combs <gerald@wireshark.org>
+ * Copyright 1998 Gerald Combs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+
+/*
+ * Original dissector can be found here
+ * https://github.com/chemeris/vrt-dissector
+*/
+
 
 #include "config.h"
 #include <epan/packet.h>
@@ -22,56 +37,56 @@
 
 static int proto_vrt = -1;
 
-//fields
-static int hf_vrt_header = -1; //32-bit header
-static int hf_vrt_type = -1; //4-bit pkt type
-static int hf_vrt_cidflag = -1; //1-bit class ID flag
-static int hf_vrt_tflag = -1; //1-bit trailer flag
-static int hf_vrt_tsmflag = -1; //1-bit timestamp mode
-static int hf_vrt_tsi = -1; //2-bit timestamp type
-static int hf_vrt_tsf = -1; //2-bit fractional timestamp type
-static int hf_vrt_seq = -1; //4-bit sequence number
-static int hf_vrt_len = -1; //16-bit length
-static int hf_vrt_sid = -1; //32-bit stream ID (opt.)
-static int hf_vrt_cid = -1; //64-bit class ID (opt.)
-static int hf_vrt_cid_oui = -1; //24-bit class ID OUI
-static int hf_vrt_cid_icc = -1; //16-bit class ID ICC
-static int hf_vrt_cid_pcc = -1; //16-bit class ID PCC
-static int hf_vrt_ts_int = -1; //32-bit integer timestamp (opt.)
-static int hf_vrt_ts_frac_picosecond = -1; //64-bit fractional timestamp (opt.)
-static int hf_vrt_ts_frac_sample = -1; //64-bit fractional timestamp (opt.)
-static int hf_vrt_data = -1; //data
-static int hf_vrt_trailer = -1; //32-bit trailer (opt.)
-static int hf_vrt_trailer_enables = -1; //trailer indicator enables
-static int hf_vrt_trailer_ind = -1; //trailer indicators
-static int hf_vrt_trailer_e = -1; //ass con pac cnt enable
-static int hf_vrt_trailer_acpc = -1; //associated context packet count
-static int hf_vrt_trailer_en_caltime = -1; //calibrated time indicator
-static int hf_vrt_trailer_en_valid = -1; //valid data ind
-static int hf_vrt_trailer_en_reflock = -1; //reference locked ind
-static int hf_vrt_trailer_en_agc = -1; //AGC/MGC enabled ind
-static int hf_vrt_trailer_en_sig = -1; //signal detected ind
-static int hf_vrt_trailer_en_inv = -1; //spectral inversion ind
-static int hf_vrt_trailer_en_overrng = -1; //overrange indicator
-static int hf_vrt_trailer_en_sampleloss = -1; //sample loss indicator
-static int hf_vrt_trailer_en_user0 = -1; //User indicator 0
-static int hf_vrt_trailer_en_user1 = -1; //User indicator 1
-static int hf_vrt_trailer_en_user2 = -1; //User indicator 2
-static int hf_vrt_trailer_en_user3 = -1; //User indicator 3
-static int hf_vrt_trailer_ind_caltime = -1; //calibrated time indicator
-static int hf_vrt_trailer_ind_valid = -1; //valid data ind
-static int hf_vrt_trailer_ind_reflock = -1; //reference locked ind
-static int hf_vrt_trailer_ind_agc = -1; //AGC/MGC enabled ind
-static int hf_vrt_trailer_ind_sig = -1; //signal detected ind
-static int hf_vrt_trailer_ind_inv = -1; //spectral inversion ind
-static int hf_vrt_trailer_ind_overrng = -1; //overrange indicator
-static int hf_vrt_trailer_ind_sampleloss = -1; //sample loss indicator
-static int hf_vrt_trailer_ind_user0 = -1; //User indicator 0
-static int hf_vrt_trailer_ind_user1 = -1; //User indicator 1
-static int hf_vrt_trailer_ind_user2 = -1; //User indicator 2
-static int hf_vrt_trailer_ind_user3 = -1; //User indicator 3
+/* fields */
+static int hf_vrt_header = -1; /* 32-bit header */
+static int hf_vrt_type = -1; /* 4-bit pkt type */
+static int hf_vrt_cidflag = -1; /* 1-bit class ID flag */
+static int hf_vrt_tflag = -1; /* 1-bit trailer flag */
+static int hf_vrt_tsmflag = -1; /* 1-bit timestamp mode */
+static int hf_vrt_tsi = -1; /* 2-bit timestamp type */
+static int hf_vrt_tsf = -1; /* 2-bit fractional timestamp type */
+static int hf_vrt_seq = -1; /* 4-bit sequence number */
+static int hf_vrt_len = -1; /* 16-bit length */
+static int hf_vrt_sid = -1; /* 32-bit stream ID (opt.) */
+static int hf_vrt_cid = -1; /* 64-bit class ID (opt.) */
+static int hf_vrt_cid_oui = -1; /* 24-bit class ID OUI */
+static int hf_vrt_cid_icc = -1; /* 16-bit class ID ICC */
+static int hf_vrt_cid_pcc = -1; /* 16-bit class ID PCC */
+static int hf_vrt_ts_int = -1; /* 32-bit integer timestamp (opt.) */
+static int hf_vrt_ts_frac_picosecond = -1; /* 64-bit fractional timestamp (opt.) */
+static int hf_vrt_ts_frac_sample = -1; /* 64-bit fractional timestamp (opt.) */
+static int hf_vrt_data = -1; /* data */
+static int hf_vrt_trailer = -1; /* 32-bit trailer (opt.) */
+static int hf_vrt_trailer_enables = -1; /* trailer indicator enables */
+static int hf_vrt_trailer_ind = -1; /* trailer indicators */
+static int hf_vrt_trailer_e = -1; /* ass con pac cnt enable */
+static int hf_vrt_trailer_acpc = -1; /* associated context packet count */
+static int hf_vrt_trailer_en_caltime = -1; /* calibrated time indicator */
+static int hf_vrt_trailer_en_valid = -1; /* valid data ind */
+static int hf_vrt_trailer_en_reflock = -1; /* reference locked ind */
+static int hf_vrt_trailer_en_agc = -1; /* AGC/MGC enabled ind */
+static int hf_vrt_trailer_en_sig = -1; /* signal detected ind */
+static int hf_vrt_trailer_en_inv = -1; /* spectral inversion ind */
+static int hf_vrt_trailer_en_overrng = -1; /* overrange indicator */
+static int hf_vrt_trailer_en_sampleloss = -1; /* sample loss indicator */
+static int hf_vrt_trailer_en_user0 = -1; /* User indicator 0 */
+static int hf_vrt_trailer_en_user1 = -1; /* User indicator 1 */
+static int hf_vrt_trailer_en_user2 = -1; /* User indicator 2 */
+static int hf_vrt_trailer_en_user3 = -1; /* User indicator 3 */
+static int hf_vrt_trailer_ind_caltime = -1; /* calibrated time indicator */
+static int hf_vrt_trailer_ind_valid = -1; /* valid data ind */
+static int hf_vrt_trailer_ind_reflock = -1; /* reference locked ind */
+static int hf_vrt_trailer_ind_agc = -1; /* AGC/MGC enabled ind */
+static int hf_vrt_trailer_ind_sig = -1; /* signal detected ind */
+static int hf_vrt_trailer_ind_inv = -1; /* spectral inversion ind */
+static int hf_vrt_trailer_ind_overrng = -1; /* overrange indicator */
+static int hf_vrt_trailer_ind_sampleloss = -1; /* sample loss indicator */
+static int hf_vrt_trailer_ind_user0 = -1; /* User indicator 0 */
+static int hf_vrt_trailer_ind_user1 = -1; /* User indicator 1 */
+static int hf_vrt_trailer_ind_user2 = -1; /* User indicator 2 */
+static int hf_vrt_trailer_ind_user3 = -1; /* User indicator 3 */
 
-//subtree state variables
+/* subtree state variables */
 static gint ett_vrt = -1;
 static gint ett_header = -1;
 static gint ett_trailer = -1;
@@ -147,56 +162,65 @@ void dissect_cid(tvbuff_t *tvb, proto_tree *tree, int offset);
 
 static void dissect_vrt(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
-    proto_tree *vrt_tree, *trailer_tree, *enable_tree, *ind_tree;
-    proto_item *ti, *trailer_item, *enable_item, *ind_item;
-    
+    int offset = 0;
+    guint8 type;
+    guint8 sidflag;
+    guint8 cidflag;
+    guint8 tflag;
+    guint8 tsiflag;
+    guint8 tsfflag;
+    guint16 len;
+    gint16 nsamps;
+
+    proto_tree *vrt_tree;
+    proto_item *ti;
+
     col_set_str(pinfo->cinfo, COL_PROTOCOL, "VITA 49");
     col_clear(pinfo->cinfo,COL_INFO);
 
-    int offset = 0;
-    // HACK to support UHD's weird header offset on data packets.
+    /* HACK to support UHD's weird header offset on data packets. */
     if (tvb_get_guint8(tvb, 0) == 0) offset += 4;
 
-    //get packet type
-    guint8 type = tvb_get_guint8(tvb, offset) >> 4;
+    /* get packet type */
+    type = tvb_get_guint8(tvb, offset) >> 4;
     col_set_str(pinfo->cinfo, COL_INFO, val_to_str(type, packet_types, "Reserved packet type (0x%02x)"));
 
-    //get SID, CID, T, TSI, and TSF flags
-    guint8 sidflag = (type & 1) || (type == 4);
-    guint8 cidflag = (tvb_get_guint8(tvb, offset) >> 3) & 0x01;
-    //tflag is in data packets but not context packets
-    guint8 tflag =   (tvb_get_guint8(tvb, offset) >> 2) & 0x01;
-    if(type == 4) tflag = 0; // this should be unnecessary but we do it
-                             // just in case
-    //tsmflag is in context packets but not data packets
-    guint8 tsmflag = (tvb_get_guint8(tvb, offset) >> 0) & 0x01;
-    guint8 tsiflag = (tvb_get_guint8(tvb, offset+1) >> 6) & 0x03;
-    guint8 tsfflag = (tvb_get_guint8(tvb, offset+1) >> 4) & 0x03;
-    guint16 len = tvb_get_ntohs(tvb, offset+2);
-    gint16 nsamps = len - 1 - sidflag - cidflag*2 - tsiflag - tsfflag*2 - tflag;
+    /* get SID, CID, T, TSI, and TSF flags */
+    sidflag = (type & 1) || (type == 4);
+    cidflag = (tvb_get_guint8(tvb, offset) >> 3) & 0x01;
+    /* tflag is in data packets but not context packets */
+    tflag =   (tvb_get_guint8(tvb, offset) >> 2) & 0x01;
+    if(type == 4) tflag = 0; /* this should be unnecessary but we do it
+                                just in case */
+    /* tsmflag is in context packets but not data packets
+       tsmflag = (tvb_get_guint8(tvb, offset) >> 0) & 0x01; */
+    tsiflag = (tvb_get_guint8(tvb, offset+1) >> 6) & 0x03;
+    tsfflag = (tvb_get_guint8(tvb, offset+1) >> 4) & 0x03;
+    len = tvb_get_ntohs(tvb, offset+2);
+    nsamps = len - 1 - sidflag - cidflag*2 - tsiflag - tsfflag*2 - tflag;
     DISSECTOR_ASSERT(tvb_length_remaining(tvb, offset) >= len * 4);
 
 
-    if(tree) { //we're being asked for details
+    if (tree) { /* we're being asked for details */
         ti = proto_tree_add_item(tree, proto_vrt, tvb, offset, -1, ENC_NA);
         vrt_tree = proto_item_add_subtree(ti, ett_vrt);
 
         dissect_header(tvb, vrt_tree, type, offset);
         offset += 4;
 
-        //header's done! if SID (last bit of type), put the stream ID here
+        /* header's done! if SID (last bit of type), put the stream ID here */
         if(sidflag) {
             proto_tree_add_item(vrt_tree, hf_vrt_sid, tvb, offset, 4, ENC_BIG_ENDIAN);
             offset += 4;
         }
 
-        //if there's a class ID (cidflag), put the class ID here
+        /* if there's a class ID (cidflag), put the class ID here */
         if(cidflag) {
             dissect_cid(tvb, vrt_tree, offset);
             offset += 8;
         }
 
-        //if TSI and/or TSF, populate those here
+        /* if TSI and/or TSF, populate those here */
         if(tsiflag != 0) {
             proto_tree_add_item(vrt_tree, hf_vrt_ts_int, tvb, offset, 4, ENC_BIG_ENDIAN);
             offset += 4;
@@ -210,36 +234,40 @@ static void dissect_vrt(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
             offset += 8;
         }
 
-        //now we've got either a context packet or a data packet
-        //TODO: parse context packet fully instead of just spewing data
+        /* now we've got either a context packet or a data packet
+           TODO: parse context packet fully instead of just spewing data */
 
-        //we're into the data
+        /* we're into the data */
         DISSECTOR_ASSERT(tvb_length_remaining(tvb, offset) >= nsamps*4);
         if(nsamps > 0)
         {
             proto_tree_add_item(vrt_tree, hf_vrt_data, tvb, offset, nsamps*4, ENC_NA);
         }
-            
+
         offset += nsamps*4;
 
         if(tflag) {
             dissect_trailer(tvb, vrt_tree, offset);
         }
-        
 
-    } else { //we're being asked for a summary
+
+    } else { /* we're being asked for a summary */
 
     }
 }
 
 void dissect_header(tvbuff_t *tvb, proto_tree *tree, int type, int _offset)
 {
-    DISSECTOR_ASSERT(tvb_length_remaining(tvb, _offset) >= 4);
-    int offset = _offset;
+    int offset;
     proto_item *hdr_item;
     proto_tree *hdr_tree;
+
+    DISSECTOR_ASSERT(tvb_length_remaining(tvb, _offset) >= 4);
+
+    offset = _offset;
+
     hdr_item = proto_tree_add_item(tree, hf_vrt_header, tvb, offset, 4, ENC_BIG_ENDIAN);
-        
+
     hdr_tree = proto_item_add_subtree(hdr_item, ett_header);
     proto_tree_add_item(hdr_tree, hf_vrt_type, tvb, offset, 1, ENC_NA);
     proto_tree_add_item(hdr_tree, hf_vrt_cidflag, tvb, offset, 1, ENC_NA);
@@ -258,26 +286,28 @@ void dissect_header(tvbuff_t *tvb, proto_tree *tree, int type, int _offset)
 
 void dissect_trailer(tvbuff_t *tvb, proto_tree *tree, int offset)
 {
-    DISSECTOR_ASSERT(tvb_length_remaining(tvb, offset) >= 4);
     proto_item *enable_item, *ind_item, *trailer_item;
     proto_tree *enable_tree, *ind_tree, *trailer_tree;
+    guint16 en_bits;
+    gint16 i;
+
+    DISSECTOR_ASSERT(tvb_length_remaining(tvb, offset) >= 4);
     trailer_item = proto_tree_add_item(tree, hf_vrt_trailer, tvb, offset, 4, ENC_BIG_ENDIAN);
     trailer_tree = proto_item_add_subtree(trailer_item, ett_trailer);
 
-    //grab the indicator enables and the indicators
-    //only display enables, indicators which are enabled
+    /* grab the indicator enables and the indicators
+       only display enables, indicators which are enabled */
     enable_item = proto_tree_add_item(trailer_tree, hf_vrt_trailer_enables, tvb, offset, 2, ENC_NA);
     ind_item = proto_tree_add_item(trailer_tree, hf_vrt_trailer_ind, tvb, offset+1, 2, ENC_NA);
-    //grab enable bits
-    guint16 en_bits = (tvb_get_ntohs(tvb, offset) & 0xFFF0) >> 4;
+    /* grab enable bits */
+    en_bits = (tvb_get_ntohs(tvb, offset) & 0xFFF0) >> 4;
 
-    //if there's any enables, start trees for enable bits and for indicators
-    //only enables and indicators which are enabled get printed.
+    /* if there's any enables, start trees for enable bits and for indicators
+       only enables and indicators which are enabled get printed. */
     if(en_bits) {
         enable_tree = proto_item_add_subtree(enable_item, ett_ind_enables);
         ind_tree = proto_item_add_subtree(ind_item, ett_indicators);
-        gint16 i=11;
-        for(i; i>=0; i--) {
+        for(i = 11; i>=0; i--) {
             if(en_bits & (1<<i)) {
                 proto_tree_add_item(enable_tree, *enable_hfs[i], tvb, offset+(i<3), 1, ENC_NA);
                 proto_tree_add_item(ind_tree, *ind_hfs[i], tvb, offset+(i<8)+1, 1, ENC_NA);
@@ -291,10 +321,11 @@ void dissect_trailer(tvbuff_t *tvb, proto_tree *tree, int offset)
 
 void dissect_cid(tvbuff_t *tvb, proto_tree *tree, int offset)
 {
-    DISSECTOR_ASSERT(tvb_length_remaining(tvb, offset) >= 8);
     proto_item *cid_item;
     proto_tree *cid_tree;
-    
+
+    DISSECTOR_ASSERT(tvb_length_remaining(tvb, offset) >= 8);
+
     cid_item = proto_tree_add_item(tree, hf_vrt_cid, tvb, offset, 8, ENC_BIG_ENDIAN);
     cid_tree = proto_item_add_subtree(cid_item, ett_cid);
 
@@ -336,7 +367,7 @@ proto_register_vrt(void)
         },
         { &hf_vrt_tsmflag,
             { "Timestamp mode", "vrt.tsmflag",
-            FT_BOOLEAN, 1,
+            FT_UINT8, 1,
             VALS(tsm_types), 0x01,
             NULL, HFILL }
         },
@@ -621,5 +652,3 @@ proto_reg_handoff_vrt(void)
     vrt_handle = create_dissector_handle(dissect_vrt, proto_vrt);
     dissector_add_uint("udp.port", VRT_PORT, vrt_handle);
 }
-
-
