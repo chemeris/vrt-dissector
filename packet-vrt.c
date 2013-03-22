@@ -1,6 +1,6 @@
 /* packet-vrt.c
  * Routines for VRT (VITA 49) packet disassembly
- * Copyright 2013, Alexander Chemeris
+ * Copyright 2013, Alexander Chemeris (alexander.chemeris@gmail.com)
  *
  * $Id: packet-vrt.c 47974 2013-03-21 13:24:24Z eapache $
  *
@@ -198,8 +198,6 @@ static void dissect_vrt(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
     tsfflag = (tvb_get_guint8(tvb, offset+1) >> 4) & 0x03;
     len = tvb_get_ntohs(tvb, offset+2);
     nsamps = len - 1 - sidflag - cidflag*2 - tsiflag - tsfflag*2 - tflag;
-    DISSECTOR_ASSERT(tvb_length_remaining(tvb, offset) >= len * 4);
-
 
     if (tree) { /* we're being asked for details */
         ti = proto_tree_add_item(tree, proto_vrt, tvb, offset, -1, ENC_NA);
@@ -238,7 +236,6 @@ static void dissect_vrt(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
            TODO: parse context packet fully instead of just spewing data */
 
         /* we're into the data */
-        DISSECTOR_ASSERT(tvb_length_remaining(tvb, offset) >= nsamps*4);
         if(nsamps > 0)
         {
             proto_tree_add_item(vrt_tree, hf_vrt_data, tvb, offset, nsamps*4, ENC_NA);
@@ -261,8 +258,6 @@ void dissect_header(tvbuff_t *tvb, proto_tree *tree, int type, int _offset)
     int offset;
     proto_item *hdr_item;
     proto_tree *hdr_tree;
-
-    DISSECTOR_ASSERT(tvb_length_remaining(tvb, _offset) >= 4);
 
     offset = _offset;
 
@@ -293,7 +288,6 @@ void dissect_trailer(tvbuff_t *tvb, proto_tree *tree, int offset)
     guint16 en_bits;
     gint16 i;
 
-    DISSECTOR_ASSERT(tvb_length_remaining(tvb, offset) >= 4);
     trailer_item = proto_tree_add_item(tree, hf_vrt_trailer, tvb, offset, 4, ENC_BIG_ENDIAN);
     trailer_tree = proto_item_add_subtree(trailer_item, ett_trailer);
 
@@ -325,8 +319,6 @@ void dissect_cid(tvbuff_t *tvb, proto_tree *tree, int offset)
 {
     proto_item *cid_item;
     proto_tree *cid_tree;
-
-    DISSECTOR_ASSERT(tvb_length_remaining(tvb, offset) >= 8);
 
     cid_item = proto_tree_add_item(tree, hf_vrt_cid, tvb, offset, 8, ENC_BIG_ENDIAN);
     cid_tree = proto_item_add_subtree(cid_item, ett_cid);
