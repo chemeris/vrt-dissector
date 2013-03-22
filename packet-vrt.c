@@ -287,7 +287,9 @@ void dissect_header(tvbuff_t *tvb, proto_tree *tree, int type, int _offset)
 void dissect_trailer(tvbuff_t *tvb, proto_tree *tree, int offset)
 {
     proto_item *enable_item, *ind_item, *trailer_item;
-    proto_tree *enable_tree, *ind_tree, *trailer_tree;
+    proto_tree *enable_tree;
+    proto_tree *ind_tree;
+    proto_tree *trailer_tree;
     guint16 en_bits;
     gint16 i;
 
@@ -298,7 +300,7 @@ void dissect_trailer(tvbuff_t *tvb, proto_tree *tree, int offset)
     /* grab the indicator enables and the indicators
        only display enables, indicators which are enabled */
     enable_item = proto_tree_add_item(trailer_tree, hf_vrt_trailer_enables, tvb, offset, 2, ENC_NA);
-    ind_item = proto_tree_add_item(trailer_tree, hf_vrt_trailer_ind, tvb, offset+1, 2, ENC_NA);
+    ind_item = proto_tree_add_item(trailer_tree, hf_vrt_trailer_ind, tvb, offset + 1, 2, ENC_NA);
     /* grab enable bits */
     en_bits = (tvb_get_ntohs(tvb, offset) & 0xFFF0) >> 4;
 
@@ -307,10 +309,10 @@ void dissect_trailer(tvbuff_t *tvb, proto_tree *tree, int offset)
     if(en_bits) {
         enable_tree = proto_item_add_subtree(enable_item, ett_ind_enables);
         ind_tree = proto_item_add_subtree(ind_item, ett_indicators);
-        for(i = 11; i>=0; i--) {
+        for(i = 11; i >= 0; i--) {
             if(en_bits & (1<<i)) {
-                proto_tree_add_item(enable_tree, *enable_hfs[i], tvb, offset+(i<3), 1, ENC_NA);
-                proto_tree_add_item(ind_tree, *ind_hfs[i], tvb, offset+(i<8)+1, 1, ENC_NA);
+                proto_tree_add_bits_item(enable_tree, *enable_hfs[i], tvb, (offset+(i<3)) * 8 + (i+1), 1, ENC_NA);
+                proto_tree_add_bits_item(ind_tree, *ind_hfs[i], tvb, (offset+(i<8)+1) * 8 + (i+5), 1, ENC_NA);
             }
         }
     }
@@ -512,25 +514,25 @@ proto_register_vrt(void)
         { &hf_vrt_trailer_ind_user0,
             { "User indicator 0", "vrt.user0",
             FT_BOOLEAN, 1,
-            NULL, 0x08,
+            NULL, 0x000,
             NULL, HFILL }
         },
         { &hf_vrt_trailer_ind_user1,
             { "User indicator 1", "vrt.user1",
             FT_BOOLEAN, 1,
-            NULL, 0x04,
+            NULL, 0x0000,
             NULL, HFILL }
         },
         { &hf_vrt_trailer_ind_user2,
             { "User indicator 2", "vrt.user2",
             FT_BOOLEAN, 1,
-            NULL, 0x02,
+            NULL, 0x000,
             NULL, HFILL }
         },
         { &hf_vrt_trailer_ind_user3,
             { "User indicator 3", "vrt.user3",
             FT_BOOLEAN, 1,
-            NULL, 0x01,
+            NULL, 0x0000,
             NULL, HFILL }
         },
         { &hf_vrt_trailer_en_caltime,
@@ -590,7 +592,7 @@ proto_register_vrt(void)
         { &hf_vrt_trailer_en_user1,
             { "User indicator 1 enable", "vrt.user1_en",
             FT_BOOLEAN, 1,
-            NULL, 0x40,
+            NULL, 0x0000,
             NULL, HFILL }
         },
         { &hf_vrt_trailer_en_user2,
@@ -602,7 +604,7 @@ proto_register_vrt(void)
         { &hf_vrt_trailer_en_user3,
             { "User indicator 3 enable", "vrt.user3_en",
             FT_BOOLEAN, 1,
-            NULL, 0x10,
+            NULL, 0x0000,
             NULL, HFILL }
         },
         { &hf_vrt_cid_oui,
