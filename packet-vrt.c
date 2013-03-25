@@ -1,6 +1,6 @@
 /* packet-vrt.c
  * Routines for VRT (VITA 49) packet disassembly
- * Copyright 2013, Alexander Chemeris (alexander.chemeris@gmail.com)
+ * Copyright 2013, Alexander Chemeris (alexander.chemeris@gmail.com), Dario Lombardo (lomato@gmail.com)
  *
  * $Id: packet-vrt.c 47974 2013-03-21 13:24:24Z eapache $
  *
@@ -32,8 +32,9 @@
 
 #include "config.h"
 #include <epan/packet.h>
+#include <epan/prefs.h>
 
-#define VRT_PORT 49156
+static gint dissector_port_pref = 4991;
 
 static int proto_vrt = -1;
 
@@ -159,6 +160,7 @@ static const int *ind_hfs[] = {
 void dissect_header(tvbuff_t *tvb, proto_tree *tree, int type, int offset);
 void dissect_trailer(tvbuff_t *tvb, proto_tree *tree, int offset);
 void dissect_cid(tvbuff_t *tvb, proto_tree *tree, int offset);
+void proto_reg_handoff_vrt(void);
 
 static void dissect_vrt(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
@@ -628,6 +630,15 @@ proto_register_vrt(void)
         &ett_cid
      };
 
+    static const enum_val_t vrt_ports[] = {
+        {"VITA 49 IANA port", "VITA 49 IANA port (4991)", 4991},
+        {"VITA 49 UHD port", "VITA 49 UHD port (49156)", 49156},
+        {"None", "Don't set any port", 0},
+        {NULL, NULL, -1}
+    };
+
+    module_t *vrt_module;
+
     proto_vrt = proto_register_protocol (
         "VITA 49 radio transport protocol", /* name       */
         "VITA 49",      /* short name */
@@ -636,13 +647,34 @@ proto_register_vrt(void)
 
     proto_register_field_array(proto_vrt, hf, array_length(hf));
     proto_register_subtree_array(ett, array_length(ett));
+
+    vrt_module = prefs_register_protocol(proto_vrt, proto_reg_handoff_vrt);
+    prefs_register_enum_preference(vrt_module,
+        "dissector_port",
+        "Dissector UDP port",
+        "The UDP port used by this dissector",
+        &dissector_port_pref, vrt_ports, TRUE);
 }
 
 void
 proto_reg_handoff_vrt(void)
 {
+    static gboolean vrt_prefs_initialized = FALSE;
     static dissector_handle_t vrt_handle;
+    static gint dissector_port;
 
-    vrt_handle = create_dissector_handle(dissect_vrt, proto_vrt);
-    dissector_add_uint("udp.port", VRT_PORT, vrt_handle);
+    if (!vrt_prefs_initialized) {
+        vrt_handle = create_dissector_handle(dissect_vrt, proto_vrt);
+        vrt_prefs_initialized = TRUE;
+    } else {
+        dissector_delete_uint("udp.port", dissector_port, vrt_handle);
+    }
+
+    dissector_port = dissector_port_pref;
+
+    if (dissector_port == 0) {
+        dissector_add_handle("udp.port", vrt_handle);
+    } else {
+        dissector_add_uint("udp.port", dissector_port, vrt_handle);
+    }
 }
