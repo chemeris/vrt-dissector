@@ -630,13 +630,6 @@ proto_register_vrt(void)
         &ett_cid
      };
 
-    static const enum_val_t vrt_ports[] = {
-        {"VITA 49 IANA port", "VITA 49 IANA port (4991)", 4991},
-        {"VITA 49 UHD port", "VITA 49 UHD port (49156)", 49156},
-        {"None", "Don't set any port", 0},
-        {NULL, NULL, -1}
-    };
-
     module_t *vrt_module;
 
     proto_vrt = proto_register_protocol (
@@ -649,11 +642,11 @@ proto_register_vrt(void)
     proto_register_subtree_array(ett, array_length(ett));
 
     vrt_module = prefs_register_protocol(proto_vrt, proto_reg_handoff_vrt);
-    prefs_register_enum_preference(vrt_module,
+    prefs_register_uint_preference(vrt_module,
         "dissector_port",
         "Dissector UDP port",
         "The UDP port used by this dissector",
-        &dissector_port_pref, vrt_ports, TRUE);
+        10, &dissector_port_pref);
 }
 
 void
